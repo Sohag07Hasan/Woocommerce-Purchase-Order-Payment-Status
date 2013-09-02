@@ -30,6 +30,7 @@ class WooPurchaseOrderPaymentStatus{
 		//more bulk actions
 		add_action('admin_footer', array(&$this, 'add_more_bulk_actions'), 5);
 		add_action('load-edit.php', array(&$this, 'process_more_bulk_actions'), 100);
+		add_action( 'admin_notices', array(&$this, 'show_bulk_admin_notices' ), 100);
 	}	
 	
 	function woocommerce_meta_boxes(){
@@ -153,7 +154,23 @@ class WooPurchaseOrderPaymentStatus{
 		wp_redirect( $sendback );
 		exit();
 		
-	}	
+	}
+	
+	//showing the bulk actions notices
+	function show_bulk_admin_notices(){
+		global $post_type, $pagenow;
+
+		if ( isset( $_REQUEST['payment_incompleted'] ) || isset( $_REQUEST['payment_completed'] ) ) {
+			$number = isset( $_REQUEST['payment_completed'] ) ? absint( $_REQUEST['payment_completed'] ) : absint( $_REQUEST['payment_incompleted'] );
+			
+			$status = isset( $_REQUEST['payment_completed'] ) ? 'paid' : 'not paid';
+			
+			if ( 'edit.php' == $pagenow && 'shop_order' == $post_type ) {
+				$message = sprintf( _n( 'Purchase Order status changed.', '%s order are marked as %s.', $number ), number_format_i18n( $number ), $status );
+				echo '<div class="updated"><p>' . $message . '</p></div>';
+			}
+		}
+	}
 	
 }
 
