@@ -27,7 +27,9 @@ class WooPurchaseOrderPaymentStatus{
 		add_filter('manage_edit-shop_order_sortable_columns', array(&$this, 'making_the_paid_button_sortable'), 1000);		
 		add_filter('request', array(&$this, 'process_the_sorting'), 1000);
 		
-		
+		//more bulk actions
+		add_action('admin_footer', array(&$this, 'add_more_bulk_actions'), 5);
+		add_action('load-edit.php', array(&$this, 'process_more_bulk_actions'), 100);
 	}	
 	
 	function woocommerce_meta_boxes(){
@@ -92,6 +94,66 @@ class WooPurchaseOrderPaymentStatus{
 				
 		return $vars;
 	}
+	
+	
+	//add new bulk actions in shop orders table
+	function add_new_bulk_actions($actions){
+		
+		$actions['paid_status'] = "Change to Paid";
+		$actions['unpaid_status'] = "Change to Unpaid";
+		return $actions;
+	}
+	
+	//add more bulk actions in shop page 
+	//currently it only support javacript
+	function add_more_bulk_actions(){
+		global $post_type;
+		if ( 'shop_order' == $post_type ) {
+			?>
+		      <script type="text/javascript">
+		      jQuery(document).ready(function() {
+		        jQuery('<option>').val('order_paid').text('<?php _e( 'Mark Paid', 'woocommerce' )?>').appendTo("select[name='action']");
+		        jQuery('<option>').val('order_unpaid').text('<?php _e( 'Mark Unpaid', 'woocommerce' )?>').appendTo("select[name='action']");
+		
+		        jQuery('<option>').val('order_paid').text('<?php _e( 'Mark Paid', 'woocommerce' )?>').appendTo("select[name='action2']");
+		        jQuery('<option>').val('order_unpaid').text('<?php _e( 'Mark Unpaid', 'woocommerce' )?>').appendTo("select[name='action2']");
+		      });
+		      </script>
+		      <?php
+		    }
+	}
+	
+	//process more bulk actions
+	function process_more_bulk_actions(){
+		$wp_list_table = _get_list_table('WP_Posts_List_Table');
+		$action = $wp_list_table->current_action();
+		
+		switch($action){
+			case 'order_paid':
+				$new_status = '1';
+				$report_action = 'payment_completed';
+				break;
+			case 'order_unpaid':
+				$new_status = '0';
+				$report_action = 'payment_incompleted';
+				break;
+			default:
+				return;
+		}
+		
+		$changed = 0;		
+		$post_ids = array_map( 'absint', (array) $_REQUEST['post'] );
+
+		foreach( $post_ids as $post_id ) {
+			update_post_meta($post_id, '_purchase_order_payment_status', $new_status);
+			$changed++;
+		}
+		
+		$sendback = add_query_arg( array( 'post_type' => 'shop_order', $report_action => $changed, 'ids' => join( ',', $post_ids ) ), '' );
+		wp_redirect( $sendback );
+		exit();
+		
+	}	
 	
 }
 
