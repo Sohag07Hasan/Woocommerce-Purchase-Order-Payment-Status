@@ -31,6 +31,8 @@ class WooPurchaseOrderPaymentStatus{
 		add_action('admin_footer', array(&$this, 'add_more_bulk_actions'), 5);
 		add_action('load-edit.php', array(&$this, 'process_more_bulk_actions'), 100);
 		add_action( 'admin_notices', array(&$this, 'show_bulk_admin_notices' ), 100);
+		
+		
 	}	
 	
 	function woocommerce_meta_boxes(){
@@ -41,8 +43,16 @@ class WooPurchaseOrderPaymentStatus{
 		include dirname(__FILE__) . '/includes/metabox.purchase-order-payment-status.php';
 	}	
 	
-	function woocommerce_process_shop_order_meta( $post_id, $post ){
-		if(isset($_POST['purchase_order_payment_status'])){
+	function woocommerce_process_shop_order_meta( $post_id, $post ){		
+		$new_status_slug = trim($_POST['order_status']);		
+		$new_status = get_term_by( 'slug', sanitize_title( $new_status_slug ), 'shop_order_status' );
+		
+		//var_dump($new_status);
+		
+		if(in_array($new_status->slug, array('processing', 'completed'))){
+			update_post_meta($post_id, '_purchase_order_payment_status', '1');
+		}		
+		elseif(isset($_POST['purchase_order_payment_status'])){
 			update_post_meta($post_id, '_purchase_order_payment_status', '1');
 		}
 		else{
@@ -51,8 +61,16 @@ class WooPurchaseOrderPaymentStatus{
 	}	
 	
 	function woocommerce_edit_order_columns($columns){
-		$columns['purchase_order_status'] = __('Paid?', 'woocommerce');
-		return $columns;
+		$new_columns = array();
+		if(is_array($columns)){
+			foreach($columns as $key => $column){
+				$new_columns[$key] = $column;
+				if($key == 'total_cost'){
+					$new_columns['purchase_order_status'] = __('Paid?', 'woocommerce');
+				}
+			}
+		}
+		return $new_columns;
 	}
 	
 	function manage_newly_added_column($column){
@@ -171,6 +189,9 @@ class WooPurchaseOrderPaymentStatus{
 			}
 		}
 	}
+	
+	
+	
 	
 }
 
